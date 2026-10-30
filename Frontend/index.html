@@ -1,0 +1,87 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe Finder</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header class="navbar">
+        <div class="logo">Recipe<span>Finder</span></div>
+        <nav>
+            <a href="#">Home</a>
+            <a href="#">Discover</a>
+            <a href="#">My Recipes</a>
+        </nav>
+    </header>
+
+    <main class="container">
+
+        <section class="hero">
+            <h1>What would you like to cook today?</h1>
+            <p>Choose the ingredients you have. We'll find recipes for you.</p>
+        </section>
+
+        <section class="search-section">
+
+            <h2>Find Ingredients</h2>
+
+            <div class="search-box">
+                <input
+                    type="text"
+                    id="ingredientSearch"
+                    placeholder="Search ingredients... e.g. onion, tomato"
+                    autocomplete="off"
+                >
+                <button id="clearSearch">Clear</button>
+            </div>
+
+            <!-- Dynamic search results -->
+            <div id="searchResults" class="search-results"></div>
+
+            <div class="selected-section">
+                <h3>Selected Ingredients</h3>
+
+                <div id="selectedIngredients" class="selected-list">
+                    <p class="empty-message">
+                        No ingredients selected yet.
+                    </p>
+                </div>
+            </div>
+
+            <button id="recommendBtn" class="recommend-btn" disabled>
+                Find Recipes
+            </button>
+
+        </section>
+
+        <!-- Recipe results -->
+        <section class="recipe-section">
+
+            <div class="section-heading">
+                <h2>Recommended Recipes</h2>
+                <span id="recipeCount"></span>
+            </div>
+
+            <div id="recipeResults" class="recipe-grid">
+                <p class="empty-message">
+                    Select ingredients to discover recipes.
+                </p>
+            </div>
+
+        </section>
+
+    </main>
+
+    <footer>
+        <p>RecipeFinder | Discover something delicious.</p>
+    </footer>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
