@@ -15,35 +15,47 @@ RECOMMEND_QUERY = text(
     SQL_PATH.read_text(encoding="utf-8")
 )
 
-
 def recommend_recipes(
     db: Session,
     ingredient_ids: list[int],
-    limit: int = 20,
-) -> list[dict]:
+    page: int = 1,
+    page_size: int = 10
+) -> dict:
 
-    # Remove duplicate selections
-    selected_ids = list(set(ingredient_ids))
+    if page < 1:
+        raise ValueError("Page must be greater than or equal to 1")
+
+    if not 1 <= page_size <= 10:
+        raise ValueError("Page size must be between 1 and 10")
+
+    selected_ids = sorted(set(ingredient_ids))
 
     if not selected_ids:
-        return []
+        return {
+            "total": 0,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": 0,
+            "results": []
+        }
 
-    if not 1 <= limit <= 100:
-        raise ValueError("limit must be between 1 and 100")
+    offset = (page - 1) * page_size
 
-    # Execute the SQL query
     result = db.execute(
         RECOMMEND_QUERY,
         {
             "ingredient_ids": selected_ids,
-            "limit": limit,
-        },
+            "page_size": page_size,
+            "offset": offset
+        }
     )
 
-    # Convert database rows to dictionaries
     rows = result.mappings().all()
 
-    return [
+    # Extract total before processing recipes
+    total = rows[0]["total"] if rows else 0
+
+    recipes = [
         {
             "recipe_id": row["recipe_id"],
             "recipe_name": row["recipe_name"],
@@ -57,3 +69,13 @@ def recommend_recipes(
         }
         for row in rows
     ]
+
+    total_pages = (total + page_size - 1) // page_size
+
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+        "results": recipes
+    }

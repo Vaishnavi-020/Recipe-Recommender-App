@@ -27,54 +27,64 @@ recipe_matches AS (
 
     LEFT JOIN selected_ingredients si
         ON i.ingredient_id = si.ingredient_id
+),
+
+recipe_summary AS (
+    SELECT
+        recipe_id,
+        recipe_title AS recipe_name,
+
+        COUNT(*) AS total_ingredients,
+
+        COUNT(*) FILTER (
+            WHERE is_matched = TRUE
+        ) AS matched_count,
+
+        COUNT(*) FILTER (
+            WHERE is_matched = FALSE
+        ) AS missing_count,
+
+        ROUND(
+            100.0 * COUNT(*) FILTER (
+                WHERE is_matched = TRUE
+            ) / NULLIF(COUNT(*), 0),
+            2
+        ) AS match_percentage,
+
+        COALESCE(
+            ARRAY_AGG(canonical_name ORDER BY canonical_name)
+            FILTER (WHERE is_matched = TRUE),
+            ARRAY[]::TEXT[]
+        ) AS matched_ingredients,
+
+        COALESCE(
+            ARRAY_AGG(canonical_name ORDER BY canonical_name)
+            FILTER (WHERE is_matched = FALSE),
+            ARRAY[]::TEXT[]
+        ) AS missing_ingredients,
+
+        BOOL_AND(is_matched) AS can_make_now
+
+    FROM recipe_matches
+
+    GROUP BY recipe_id, recipe_title
+
+    HAVING COUNT(*) FILTER (
+        WHERE is_matched = TRUE
+    ) > 0
 )
 
 SELECT
-    recipe_id,
-    recipe_title AS recipe_name,
+    *,
+    COUNT(*) OVER() AS total
 
-    COUNT(*) AS total_ingredients,
-
-    COUNT(*) FILTER (
-        WHERE is_matched = TRUE
-    ) AS matched_count,
-
-    COUNT(*) FILTER (
-        WHERE is_matched = FALSE
-    ) AS missing_count,
-
-    ROUND(
-        100.0 * COUNT(*) FILTER (
-            WHERE is_matched = TRUE
-        ) / NULLIF(COUNT(*), 0),
-        2
-    ) AS match_percentage,
-
-    COALESCE(
-        ARRAY_AGG(canonical_name ORDER BY canonical_name)
-        FILTER (WHERE is_matched = TRUE),
-        ARRAY[]::TEXT[]
-    ) AS matched_ingredients,
-
-    COALESCE(
-        ARRAY_AGG(canonical_name ORDER BY canonical_name)
-        FILTER (WHERE is_matched = FALSE),
-        ARRAY[]::TEXT[]
-    ) AS missing_ingredients,
-
-    BOOL_AND(is_matched) AS can_make_now
-
-FROM recipe_matches
-
-GROUP BY recipe_id, recipe_title
-
-HAVING COUNT(*) FILTER (
-    WHERE is_matched = TRUE
-) > 0
+FROM recipe_summary
 
 ORDER BY
     match_percentage DESC,
     missing_count ASC,
-    recipe_name ASC
+    recipe_name ASC,
+    recipe_id ASC
 
-LIMIT :limit;
+LIMIT :page_size
+OFFSET :offset;

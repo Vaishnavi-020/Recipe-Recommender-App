@@ -20,4 +20,7 @@ class RecipeRecommendationItem(BaseModel):
 
 class RecipeRecommendationResponse(BaseModel):
     selected_ingredient_ids: list[int]
+    total_pages:int
+    page:int
+    page_size:int
     results: list[RecipeRecommendationItem]

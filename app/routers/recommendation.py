@@ -1,5 +1,5 @@
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException,Query
 from sqlalchemy.orm import Session
 
 from app.ETL.db_connection import get_db
@@ -21,6 +21,8 @@ router = APIRouter(
 )
 def get_recommendations(
     payload: RecipeRecommendationRequest,
+    page:int=Query(default=1,ge=1),
+    page_size:int=Query(default=10,ge=1,le=10),
     db: Session = Depends(get_db),
 ):
     # Remove duplicate ingredient IDs
@@ -37,11 +39,12 @@ def get_recommendations(
     results = recommend_recipes(
         db=db,
         ingredient_ids=selected_ids,
-        limit=20,
+        page=page,
+        page_size=page_size
     )
 
     # Return the response in the expected schema
     return {
         "selected_ingredient_ids": selected_ids,
-        "results": results,
+        **results   # Dixtionary unpacking
     }
