@@ -32,7 +32,7 @@ def recommend_recipes(
 
     if not selected_ids:
         return {
-            "total": 0,
+            "total_recipes": 0,
             "page": page,
             "page_size": page_size,
             "total_pages": 0,
@@ -73,7 +73,7 @@ def recommend_recipes(
     total_pages = (total + page_size - 1) // page_size
 
     return {
-        "total": total,
+        "total_recipes": total,
         "page": page,
         "page_size": page_size,
         "total_pages": total_pages,

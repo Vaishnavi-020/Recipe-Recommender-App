@@ -60,20 +60,40 @@
         </section>
 
         <!-- Recipe results -->
-        <section class="recipe-section">
+        
+<section class="recipe-section">
 
-            <div class="section-heading">
-                <h2>Recommended Recipes</h2>
-                <span id="recipeCount"></span>
-            </div>
+    <div class="section-heading">
+        <h2>Recommended Recipes</h2>
+        <span id="recipeCount"></span>
+    </div>
 
-            <div id="recipeResults" class="recipe-grid">
-                <p class="empty-message">
-                    Select ingredients to discover recipes.
-                </p>
-            </div>
+    <div id="recipeResults" class="recipe-grid">
+        <p class="empty-message">
+            Select ingredients to discover recipes.
+        </p>
+    </div>
 
-        </section>
+    <!-- Pagination controls -->
+    <div id="pagination" class="pagination">
+
+        <button id="prevBtn" disabled>
+            Previous
+        </button>
+
+
+    <span id="pageInfo"></span>
+
+        <div id="pageNumbers" class="page-numbers"></div>
+
+        <button id="nextBtn" disabled>
+            Next
+        </button>
+
+    </div>
+
+</section>
+
 
     </main>
 

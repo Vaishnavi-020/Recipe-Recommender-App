@@ -8,6 +8,13 @@ const API_BASE = "http://127.0.0.1:8000";
 const SEARCH_API = `${API_BASE}/ingredients/search`;
 const RECOMMEND_API = `${API_BASE}/recipes/recommend`;
 
+
+// Declaring Variables
+let currentPage = 1;
+let pageSize = 10;
+let totalPages = 0;
+let totalRecipes = 0;
+
 // ----------------------------------
 // DOM ELEMENTS
 // ----------------------------------
@@ -19,7 +26,10 @@ const recommendBtn = document.getElementById("recommendBtn");
 const recipeResults = document.getElementById("recipeResults");
 const recipeCount = document.getElementById("recipeCount");
 const clearSearch = document.getElementById("clearSearch");
-
+const pagination = document.getElementById("pagination");
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
+const pageNumbers = document.getElementById("pageNumbers");
 // ----------------------------------
 // STATE
 // ----------------------------------
@@ -243,13 +253,23 @@ clearSearch.addEventListener("click", () => {
 // ----------------------------------
 // 8. GET RECIPE RECOMMENDATIONS
 // ----------------------------------
-
-
 recommendBtn.addEventListener("click", async () => {
 
     if (selectedIngredients.size === 0) {
         return;
     }
+
+    currentPage = 1;
+
+    await fetchRecommendations(currentPage);
+
+});
+
+async function fetchRecommendations(page) {
+
+    recommendBtn.disabled = true;
+    prevBtn.disabled = true;
+    nextBtn.disabled = true;
 
     try {
 
@@ -263,19 +283,20 @@ recommendBtn.addEventListener("click", async () => {
             selectedIngredients.keys()
         );
 
-        const response = await fetch(RECOMMEND_API, {
+        const response = await fetch(
+            `${RECOMMEND_API}?page=${page}&page_size=${pageSize}`,
+            {
+                method: "POST",
 
-            method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
 
-            headers: {
-                "Content-Type": "application/json"
-            },
-
-            body: JSON.stringify({
-                ingredient_ids: ingredientIds
-            })
-
-        });
+                body: JSON.stringify({
+                    ingredient_ids: ingredientIds
+                })
+            }
+        );
 
         if (!response.ok) {
             throw new Error(`HTTP Error: ${response.status}`);
@@ -285,8 +306,12 @@ recommendBtn.addEventListener("click", async () => {
 
         console.log("Recommendation Response:", data);
 
-        // Access the results array inside the response object.
+        // Update pagination buttons
+        updatePagination(data);
+
+        // Display recipes for the current page
         displayRecipes(data.results);
+
 
     } catch (error) {
 
@@ -300,6 +325,22 @@ recommendBtn.addEventListener("click", async () => {
         recommendBtn.disabled = selectedIngredients.size === 0;
         recommendBtn.textContent = "Find Recipes";
 
+    }
+
+}
+
+prevBtn.addEventListener("click", () => {
+
+    if (currentPage > 1) {
+        fetchRecommendations(currentPage - 1);
+    }
+
+});
+
+nextBtn.addEventListener("click", () => {
+
+    if (currentPage < totalPages) {
+        fetchRecommendations(currentPage + 1);
     }
 
 });
@@ -316,7 +357,7 @@ function displayRecipes(recipes) {
     recipeResults.innerHTML = "";
 
     recipeCount.textContent =
-        `${recipes.length} recipes found`;
+        `${totalRecipes} recipes found`;
 
     if (recipes.length === 0) {
 
@@ -324,7 +365,6 @@ function displayRecipes(recipes) {
             "<p>No recipes found for these ingredients.</p>";
 
         return;
-
     }
 
     recipes.forEach(recipe => {
@@ -389,5 +429,26 @@ function displayRecipes(recipes) {
         recipeResults.appendChild(card);
 
     });
+
+}
+
+
+// UPDATE PAGINATION
+function updatePagination(data) {
+
+    // Update pagination state
+    currentPage = data.page;
+    totalPages = data.total_pages;
+    totalRecipes = data.total_recipes;
+
+    // Display current page information
+    pageInfo.textContent =
+        `Page ${currentPage} of ${totalPages}`;
+
+    // Disable Previous button on first page
+    prevBtn.disabled = currentPage <= 1;
+
+    // Disable Next button on last page
+    nextBtn.disabled = currentPage >= totalPages;
 
 }
