@@ -16,7 +16,6 @@ text_cols = [
     "base",
     "parenthetical",
     "parenthetical_type",
-    "ingredient_attribute",
 ]
 
 for col in text_cols:
@@ -26,6 +25,10 @@ for col in text_cols:
     )
 
 metadata = metadata.replace(r"^\s*$", pd.NA, regex=True)
+
+# ----------------------------------------
+# 1. VALID METADATA
+# ----------------------------------------
 
 metadata_valid = metadata.dropna(
     subset=["raw", "base"]
@@ -41,7 +44,14 @@ if (conflicts > 1).any():
         "Resolve raw-to-base conflicts before loading."
     )
 
-# One raw ingredient name -> one canonical ingredient.
+# ----------------------------------------
+# 2. RAW TO BASE MAPPING
+# ----------------------------------------
+
+# IMPORTANT:
+# Include ALL classifications, including 'not sure'.
+# Every valid raw ingredient must map to its base name.
+
 raw_to_base = (
     metadata_valid
     .drop_duplicates("raw")
@@ -49,32 +59,51 @@ raw_to_base = (
     .to_dict()
 )
 
-print("Converted successfully")
+# ----------------------------------------
+# 3. ALIAS MAPPINGS
+# ----------------------------------------
 
-# Only parentheticals explicitly classified as aliases.
+# Only explicitly classified aliases are included.
+
 aliases_df = metadata_valid[
     (metadata_valid["parenthetical_type"] == "alias")
     & metadata_valid["parenthetical"].notna()
 ][["base", "parenthetical"]].drop_duplicates()
 
-# Determine the effective attribute.
-metadata_valid["effective_attribute"] = (
-    metadata_valid["ingredient_attribute"]
-)
+# ----------------------------------------
+# 4. ATTRIBUTE MAPPINGS
+# ----------------------------------------
 
-mask = (
-    metadata_valid["parenthetical_type"].eq("attribute")
+attribute_df = metadata_valid[
+    (metadata_valid["parenthetical_type"] == "attribute")
     & metadata_valid["parenthetical"].notna()
-)
+][["base", "parenthetical"]].drop_duplicates()
 
-# If the parenthetical itself is an attribute, use it.
-metadata_valid.loc[mask, "effective_attribute"] = (
-    metadata_valid.loc[mask, "parenthetical"]
-)
-
+# Create lookup for raw ingredient -> attribute.
 attribute_lookup = (
-    metadata_valid
+    metadata_valid[
+        metadata_valid["parenthetical_type"] == "attribute"
+    ]
     .drop_duplicates("raw")
-    .set_index("raw")["effective_attribute"]
+    .set_index("raw")["parenthetical"]
     .to_dict()
 )
+
+# ----------------------------------------
+# 5. VALIDATION
+# ----------------------------------------
+
+print("Converted successfully")
+
+print("Unique raw ingredients:", len(raw_to_base))
+print("Alias mappings:", len(aliases_df))
+print(
+    "Attribute mappings:",
+    len(attribute_df)
+)
+
+print(
+    "Not sure rows:",
+    metadata_valid["parenthetical_type"].eq("not sure").sum()
+)
+

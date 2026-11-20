@@ -17,12 +17,17 @@ def prepare_for_postgres(df):
     return df
 
 final_recipe=recipes_df.drop(
-    columns=['ingredient_metadata'],
+    columns=['ingredient_metadata','source_recipe_id'],
+    errors='ignore'
+)
+
+final_metadata=metadata_df.drop(
+    columns=['source_recipe_id'],
     errors='ignore'
 )
 
 recipes_to_load=prepare_for_postgres(final_recipe)
-metadata_to_load=prepare_for_postgres(metadata_df)
+metadata_to_load=prepare_for_postgres(final_metadata)
 
 recipes_to_load.to_sql(
     name='recipes_staging',

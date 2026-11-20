@@ -10,11 +10,13 @@ from app.models.alias_names import AliasNames
 from .before_load_process import raw_to_base,aliases_df,attribute_lookup
 from .df_prepare import recipes_df
 
-canonical_names=sorted(set(raw_to_base.values()))
+
+canonical_names = sorted(set(raw_to_base.values()))
 
 with Session(engine) as session:
     try:
-        ingredient_objects=[
+        # 1. Insert canonical ingredients
+        ingredient_objects = [
             Ingredients(canonical_name=name)
             for name in canonical_names
         ]
@@ -22,34 +24,47 @@ with Session(engine) as session:
         session.add_all(ingredient_objects)
         session.flush()
 
-        ingredient_ids={
-            obj.canonical_name:obj.ingredient_id
+        ingredient_ids = {
+            obj.canonical_name: obj.ingredient_id
             for obj in ingredient_objects
         }
 
-        existing_aliases=set(session.scalars(
+        # 2. Insert valid aliases only
+        existing_aliases = set(session.scalars(
             select(AliasNames.alias_name)
         ).all())
-        alias_objects=[]
+
+        alias_objects = []
+
         for row in aliases_df.itertuples(index=False):
-            base=row.base
-            alias=row.parenthetical
+            base = row.base
+            alias = row.parenthetical
 
             if pd.isna(alias) or pd.isna(base):
                 continue
-            alias=alias.strip().lower()
+
+            alias = alias.strip().lower()
+
             if alias in existing_aliases:
                 continue
-            ingredient_id=ingredient_ids[base]
-            alias_objects.append(AliasNames(
-                ingredient_id=ingredient_id,
-                alias_name=alias
-            ))
+
+            ingredient_id = ingredient_ids[base]
+
+            alias_objects.append(
+                AliasNames(
+                    ingredient_id=ingredient_id,
+                    alias_name=alias
+                )
+            )
+
             existing_aliases.add(alias)
+
         session.add_all(alias_objects)
 
+        # 3. Insert recipes and recipe-ingredient mappings
         for row in recipes_df.itertuples(index=False):
-            recipe=Recipe(
+
+            recipe = Recipe(
                 recipe_title=row.Recipe_title,
                 cuisine=row.Cuisine,
                 instructions=row.Instructions,
@@ -61,30 +76,40 @@ with Session(engine) as session:
             session.add(recipe)
             session.flush()
 
-            seen=set()
+            seen = set()
+
             for raw_name in row.Cleaned_Ingredients:
+
                 if not raw_name or raw_name in seen:
                     continue
-                seen.add(raw_name)
-                base=raw_to_base.get(raw_name)
-                if base is None:
-                    print('Unmatched Ingredeint:',raw_name)
-                    continue
-                ingredient_id=ingredient_ids[base]
-                attribute=attribute_lookup.get(raw_name)
 
-                link=RecipeIngredient(
+                seen.add(raw_name)
+
+                # Every classification maps to its base ingredient
+                base = raw_to_base.get(raw_name)
+
+                if base is None:
+                    print("Unmatched Ingredient:", raw_name)
+                    continue
+
+                ingredient_id = ingredient_ids[base]
+
+                # Only attribute-classified rows have an attribute.
+                attribute = attribute_lookup.get(raw_name)
+
+                link = RecipeIngredient(
                     recipe_id=recipe.recipe_id,
                     ingredient_id=ingredient_id,
                     raw_ingredient_name=raw_name,
-                    ingredient_attribute=(
-                        attribute if pd.notna(attribute) else None
-                    )
+                    ingredient_attribute=attribute
                 )
+
                 session.add(link)
+
         session.commit()
 
         print("ETL completed successfully :)")
-    except:
+
+    except Exception:
         session.rollback()
         raise
