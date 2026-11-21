@@ -59,7 +59,7 @@ def recommend_recipes(
         {
             "recipe_id": row["recipe_id"],
             "recipe_name": row["recipe_name"],
-            "match_percentage": float(row["match_percentage"]),
+            "match_percentage": float(row["weighted_match_percentage"]),
             "matched_ingredients": row["matched_ingredients"],
             "missing_ingredients": row["missing_ingredients"],
             "matched_count": row["matched_count"],

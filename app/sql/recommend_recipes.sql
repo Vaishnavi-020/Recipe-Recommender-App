@@ -11,6 +11,8 @@ recipe_matches AS (
         r.recipe_title,
         i.ingredient_id,
         i.canonical_name,
+        stats.idf_weight,
+
         CASE
             WHEN si.ingredient_id IS NOT NULL
             THEN TRUE
@@ -24,6 +26,9 @@ recipe_matches AS (
 
     JOIN ingredients i
         ON ri.ingredient_id = i.ingredient_id
+
+    JOIN ingredient_statistics stats
+        ON i.ingredient_id = stats.ingredient_id
 
     LEFT JOIN selected_ingredients si
         ON i.ingredient_id = si.ingredient_id
@@ -44,12 +49,34 @@ recipe_summary AS (
             WHERE is_matched = FALSE
         ) AS missing_count,
 
+        -- Original unweighted percentage
         ROUND(
             100.0 * COUNT(*) FILTER (
                 WHERE is_matched = TRUE
             ) / NULLIF(COUNT(*), 0),
             2
         ) AS match_percentage,
+
+        -- Sum of weights for matched ingredients
+        SUM(idf_weight) FILTER (
+            WHERE is_matched = TRUE
+        ) AS matched_weight,
+
+        -- Sum of weights for all recipe ingredients
+        SUM(idf_weight) AS total_weight,
+
+        -- New IDF-weighted match percentage
+        ROUND(
+            100.0 *
+            COALESCE(
+                SUM(idf_weight) FILTER (
+                    WHERE is_matched = TRUE
+                ),
+                0
+            )
+            / NULLIF(SUM(idf_weight), 0),
+            2
+        ) AS weighted_match_percentage,
 
         COALESCE(
             ARRAY_AGG(canonical_name ORDER BY canonical_name)
@@ -81,7 +108,7 @@ SELECT
 FROM recipe_summary
 
 ORDER BY
-    match_percentage DESC,
+    weighted_match_percentage DESC,
     missing_count ASC,
     recipe_name ASC,
     recipe_id ASC
